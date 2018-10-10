@@ -6,23 +6,32 @@ class XMReader:
         self.fileName = fileName
         self.noteDict = {
             '\x81': 'p',
+            '\x82': 'i',
             '\x83': 'pi',
             '\x84': 'v',
             '\x85': 'pv',
+            '\x86': 'iv', #Guess??
             '\x87': 'piv',
             '\x88': '1',
+            '\x89': 'p1', #Guess??
             '\x8A': 'i1',
+            '\x8B': 'pi1',
+            '\x8C': 'v1',
             '\x8D': 'pv1',
+            '\x8E': 'vi1',                    #Guess??
+            '\x8F': 'piv1',
             '\x90': '2',
             '\x91': 'p2',
             '\x92': 'i2',
-            '\x93': 'piv1',
+            '\x93': 'pi2', #2 might be 1??
             '\x94': 'v2',
             '\x95': 'pv2',
             '\x96': 'iv2',
+            '\x97': 'piv2',
             '\x98': '12',
             '\x99': 'p12',
             '\x9A': 'i12',
+            '\x9B': 'pi12',
             '\x9C': 'v12',
             '\x9D': 'pv12',
             '\x9E': 'iv12'
@@ -42,7 +51,7 @@ class XMReader:
         # 88 = Fx1
         # 89 = ??? (Doesn't appear in OpenMPT)
         # 8A = instrument, Fx1
-        # 8B = ???
+        # 8B = ??? pitch ins fx1
         # 8C = ???
         # 8D = pitch, volume, Fx1
         # 8E = ???
@@ -54,16 +63,16 @@ class XMReader:
         # 94 = volume, Fx2
         # 95 = pitch, volume, Fx2
         # 96 = instrument, volume, Fx2
-        # 97 = ???
+        # 97 = pitch, instrument, volume, fx2
         # 98 = Fx1, Fx2
         # 99 = pitch, Fx1, Fx2
         # 9A = instrument, Fx1, Fx2
-        # 9B = ???
+        # 9B = pitch, instrument, fx1, fx2
         # 9C = volume, Fx1, Fx2
         # 9D = pitch, volume, Fx1, Fx2
         # 9E = instrument, volume, Fx1, Fx2
         # 9F = ???
-        #
+        # 94 20 CC
         #
         #   noteDict{}
         #
@@ -134,7 +143,7 @@ class XMReader:
                 print("{}: {}".format("endValue", endVal))
 
                 # checks if the end value is 7 or 9 (end-of-pattern indicators)
-                if ((endVal == 9 or endVal == 7) and spaceCount > 0):
+                if ((endVal == 9 or endVal == 7)):
                     print("Valid Area!")
                     content = content[8:]
 
@@ -144,19 +153,19 @@ class XMReader:
                     # loop that checks each note individually
                     while(j < spaceCount):
                         # stores a blank if there's no note played
-                        if (content[j] == 128):
-                            self.patList[curPat].ch[curCh].addNote(b'\x80')
+                        if (chr(content[j]) == '\x80'):
+                            self.patList[curPat].ch[curCh].addNote(content[j])
                             j += 1
                         # stores note information if it's a note
                         elif chr(content[j]) in self.noteDict:
                             # add stop note
-                            if (hex(content[j]) == b'\x81' and hex(content[j + 1]) == b'\x61'):
-                                self.patList[curPat].ch[curCh].addNote(b'\x81')
+                            if (chr(content[j]) == '\x81' and chr(content[j + 1]) == '\x61'):
+                                self.patList[curPat].ch[curCh].addNote(content[j])
                                 self.patList[curPat].ch[curCh].notes[curNote].isStop = True
                                 j += 2
                             # add any note besides stop
                             else:
-                                self.patList[curPat].ch[curCh].addNote(hex(content[j]))
+                                self.patList[curPat].ch[curCh].addNote(content[j])
                                 self.patList[curPat].ch[curCh].notes[curNote].isNote = True
                                 self.patList[curPat].ch[curCh].notes[curNote].isStop = False
                                 valLib = self.noteDict[chr(content[j])]
@@ -180,15 +189,32 @@ class XMReader:
                                         self.patList[curPat].ch[curCh].notes[curNote].fx2 = content[j + k + 1]
                                     k += 1
                                 j += len(valLib) + 1
+
+
+                        #if note has all settings selected
+                        elif (1 <= content[j] <= 96):
+                            self.patList[curPat].ch[curCh].addNote(content[j])
+                            self.patList[curPat].ch[curCh].notes[curNote].pitch = content[j]
+                            self.patList[curPat].ch[curCh].notes[curNote].ins = content[j + 1]
+                            self.patList[curPat].ch[curCh].notes[curNote].vol = content[j + 2]
+                            self.patList[curPat].ch[curCh].notes[curNote].fx1 = content[j + 3]
+                            self.patList[curPat].ch[curCh].notes[curNote].fx2 = content[j + 4]
+
+                            j += 5
                         else:
-                            print('Error at value {} pattern {}!'.format(content[j], curPat))
+                            print('Error at value {}, pattern {}, channel {}, note {}! Next 10 values: {}'.format(hex(content[j]), self.patList[curPat].pNum, curCh + 1, curNote +1, content[j:j+9]))
+                            print(" Last note: {}".format(dir(self.patList[curPat].ch[curCh - 1].notes[curNote])))
+                            print("2nd to last note: {}".format(dir(self.patList[curPat].ch[7].notes[curNote-1])))
+                            print(" ")
+                            print("{}".format(dir(self.patList[curPat])))
+                            print(" ")
+                            print(content[j:j+200])
                             j += 1
                         if (curCh == (numChannel - 1)):
                             curCh = 0
                             curNote += 1
                         else:
                             curCh += 1
-
                     curPat += 1
                 else:
                     print("Invalid Area :(")
