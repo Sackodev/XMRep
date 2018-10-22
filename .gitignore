@@ -1,3 +1,6 @@
 *.xm
 xmread.pyc
 __pycache__/
+*.desktop
+venv/
+notes

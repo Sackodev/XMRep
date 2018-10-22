@@ -10,20 +10,20 @@ class XMReader:
             '\x83': 'pi',
             '\x84': 'v',
             '\x85': 'pv',
-            '\x86': 'iv', #Guess??
+            '\x86': 'iv',
             '\x87': 'piv',
             '\x88': '1',
-            '\x89': 'p1', #Guess??
+            '\x89': 'p1',
             '\x8A': 'i1',
             '\x8B': 'pi1',
             '\x8C': 'v1',
             '\x8D': 'pv1',
-            '\x8E': 'vi1',                    #Guess??
+            '\x8E': 'vi1',
             '\x8F': 'piv1',
             '\x90': '2',
             '\x91': 'p2',
             '\x92': 'i2',
-            '\x93': 'pi2', #2 might be 1??
+            '\x93': 'pi2',
             '\x94': 'v2',
             '\x95': 'pv2',
             '\x96': 'iv2',
@@ -37,6 +37,7 @@ class XMReader:
             '\x9E': 'iv12'
         }
         self.patList = []
+        self.defaultBPM = None
 
         # 80 = blank note
         #
@@ -81,19 +82,7 @@ class XMReader:
         #
         #
         #
-        # patternDict
-        # each pattern has channels
-        # each channel has notes
-        # patDict = {}
-        # patDict[] = {}
-        # patDict[][] = {}
-        # patDict[][][] = {}
-        # patDict[][][][]
-        # patDict[1][2][542]['volume']
-        #
-        #
-        #
-        #
+        #https://www.fileformat.info/format/xm/corion.htm for reference
 
     def readXM(self):
         # opens the XM file and stores all of it in bytes
@@ -102,6 +91,10 @@ class XMReader:
 
             # finds the # of channels used in the song
             numChannel = content[68]
+
+            #finds the BPM
+            self.defaultBPM = content[78]
+            print(self.defaultBPM)
 
             # finds when the pattern listing in the file ends
             pattStopNum = content.find(b'\x09\x00\x00')
@@ -139,7 +132,10 @@ class XMReader:
                 print("{}: {}".format("spaceCount", spaceCount))
 
                 # stores value at end of pattern
-                endVal = content[8 + spaceCount]
+                if((8+spaceCount) < len(content)):
+                    endVal = content[8 + spaceCount]
+                else:
+                    endVal = 0
                 print("{}: {}".format("endValue", endVal))
 
                 # checks if the end value is 7 or 9 (end-of-pattern indicators)
